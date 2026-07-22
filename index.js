@@ -41,25 +41,47 @@ async function startClient(sessionData) {
   // تسجيل الدخول
   if (!sessionData) {
     logger.info('🔐 جاري تسجيل الدخول...');
-    await client.start({
-      phoneNumber: async () => config.telegram.phoneNumber,
-      password: async () => {
-        const password = config.telegram.password;
-        if (password) return password;
-        throw new Error('المصادقة الثنائية مفعلة. أدخل كلمة المرور في .env');
-      },
-      phoneCode: async () => {
-        const readline = await import('readline');
-        const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-        return new Promise((resolve) => {
-          rl.question('📝 أدخل كود التحقق: ', (code) => {
-            rl.close();
-            resolve(code.trim());
+    await client.connect();
+
+    // طلب كود التحقق يدوياً
+    const phoneCodeHash = await client.sendCodeRequest({
+      phoneNumber: config.telegram.phoneNumber,
+    });
+    logger.info('📤 تم إرسال طلب الكود. انتظر الرسالة في تيليجرام...');
+
+    // طلب الكود من المستخدم
+    const readline = await import('readline');
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    const code = await new Promise((resolve) => {
+      rl.question('📝 أدخل كود التحقق (5 أرقام): ', (answer) => {
+        rl.close();
+        resolve(answer.trim());
+      });
+    });
+
+    // تسجيل الدخول بالكود
+    try {
+      await client.signIn({
+        phoneNumber: config.telegram.phoneNumber,
+        phoneCodeHash: phoneCodeHash.phoneCodeHash,
+        phoneCode: code,
+      });
+    } catch (error) {
+      // إذا كان الخطأ بسبب 2FA
+      if (error.message.includes('SESSION_PASSWORD_NEEDED')) {
+        logger.info('🔒 المصادقة الثنائية مطلوبة...');
+        const rl2 = readline.createInterface({ input: process.stdin, output: process.stdout });
+        const password = await new Promise((resolve) => {
+          rl2.question('🔑 أدخل كلمة المرور (2FA): ', (answer) => {
+            rl2.close();
+            resolve(answer.trim());
           });
         });
-      },
-      onError: (err) => logger.error('خطأ في تسجيل الدخول', { error: err.message }),
-    });
+        await client.signIn({ password });
+      } else {
+        throw error;
+      }
+    }
 
     // حفظ الجلسة
     const newSession = client.session.save();
