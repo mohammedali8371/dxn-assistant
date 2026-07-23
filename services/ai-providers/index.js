@@ -8,6 +8,8 @@ import logger from '../../utils/logger.js';
 import openaiProvider from './openai.js';
 import geminiProvider from './gemini.js';
 import deepseekProvider from './deepseek.js';
+import groqProvider from './groq.js';
+import multiSearchProvider from './multi-search.js';
 
 class AIProviderManager {
   constructor() {
@@ -22,6 +24,8 @@ class AIProviderManager {
     this.providers.openai = openaiProvider;
     this.providers.gemini = geminiProvider;
     this.providers.deepseek = deepseekProvider;
+    this.providers.groq = groqProvider;
+    this.providers.multiSearch = multiSearchProvider;
 
     // تهيئة جميع المزودين
     for (const [name, provider] of Object.entries(this.providers)) {

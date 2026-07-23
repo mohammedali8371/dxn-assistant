@@ -34,6 +34,9 @@ const config = {
     deepseek: {
       apiKey: process.env.DEEPSEEK_API_KEY || '',
     },
+    groq: {
+      apiKey: process.env.GROQ_API_KEY || '',
+    },
     temperature: parseFloat(process.env.TEMPERATURE || '0.7'),
   },
 
