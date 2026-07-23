@@ -1,161 +1,83 @@
 /**
- * الملف الرئيسي - نقطة البداية
- * تهيئة الاتصالات وتشغيل المساعد
+ * DXN Telegram Assistant - نقطة البداية
  */
 
-import { TelegramClient } from 'telegram';
-import { StringSession } from 'telegram/sessions/index.js';
-import { NewMessage } from 'telegram/events/index.js';
-import config from './config.js';
-import { connectDB, saveSession, loadSession } from './database.js';
-import { handleMessage } from './handlers.js';
-import { buildKnowledgeBase } from './rag.js';
-import { startDashboard } from './dashboard.js';
-import { logger } from './utils.js';
+import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import config from './config/index.js';
+import { connection } from './database/index.js';
+import telegramService from './services/telegram.js';
+import { handleMessage } from './handlers/message.js';
+import apiRoutes from './routes/api.js';
+import logger from './utils/logger.js';
+import { ensureDir } from './utils/helpers.js';
 
-// ======================== المتغيرات العامة ========================
-let client = null;
-
-// ======================== إعدادات العميل ========================
-const stringSession = new StringSession('');
-
-/**
- * بدء تشغيل العميل
- */
-async function startClient(sessionData) {
-  const session = sessionData ? new StringSession(sessionData) : new StringSession('');
-
-  client = new TelegramClient(
-    session,
-    config.telegram.apiId,
-    config.telegram.apiHash,
-    {
-      connectionRetries: 5,
-      retryDelay: 1000,
-      autoReconnect: true,
-      useWSS: true,
-      timeout: 30000,
-    }
-  );
-
-  // تسجيل الدخول
-  if (!sessionData) {
-    logger.info('🔐 جاري تسجيل الدخول...');
-    await client.connect();
-
-    // طلب كود التحقق يدوياً
-    const phoneCodeHash = await client.sendCodeRequest({
-      phoneNumber: config.telegram.phoneNumber,
-    });
-    logger.info('📤 تم إرسال طلب الكود. انتظر الرسالة في تيليجرام...');
-
-    // طلب الكود من المستخدم
-    const readline = await import('readline');
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-    const code = await new Promise((resolve) => {
-      rl.question('📝 أدخل كود التحقق (5 أرقام): ', (answer) => {
-        rl.close();
-        resolve(answer.trim());
-      });
-    });
-
-    // تسجيل الدخول بالكود
-    try {
-      await client.signIn({
-        phoneNumber: config.telegram.phoneNumber,
-        phoneCodeHash: phoneCodeHash.phoneCodeHash,
-        phoneCode: code,
-      });
-    } catch (error) {
-      // إذا كان الخطأ بسبب 2FA
-      if (error.message.includes('SESSION_PASSWORD_NEEDED')) {
-        logger.info('🔒 المصادقة الثنائية مطلوبة...');
-        const rl2 = readline.createInterface({ input: process.stdin, output: process.stdout });
-        const password = await new Promise((resolve) => {
-          rl2.question('🔑 أدخل كلمة المرور (2FA): ', (answer) => {
-            rl2.close();
-            resolve(answer.trim());
-          });
-        });
-        await client.signIn({ password });
-      } else {
-        throw error;
-      }
-    }
-
-    // حفظ الجلسة
-    const newSession = client.session.save();
-    await saveSession(newSession);
-    logger.info('✅ تم تسجيل الدخول وحفظ الجلسة');
-  } else {
-    await client.connect();
-    logger.info('✅ تم الاتصال بالخادم بجلسة محفوظة');
-  }
-
-  // إضافة معالج الرسائل
-  client.addEventHandler(handleMessage, new NewMessage({ incoming: true }));
-
-  // معلومات الحساب
-  const me = await client.getMe();
-  logger.info(`🤖 المساعد يعمل باسم: ${me.firstName} (@${me.username || 'غير محدد'})`);
-
-  return client;
-}
-
-// ======================== التشغيل الرئيسي ========================
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 async function main() {
-  logger.info('🚀 جاري بدء تشغيل المساعد...');
-
   try {
-    // 1. الاتصال بقاعدة البيانات
-    await connectDB();
+    logger.info('🚀 بدء تشغيل مساعد DXN...');
 
-    // 2. بناء قاعدة المعرفة
-    await buildKnowledgeBase();
+    // 1) إنشاء المجلدات
+    ensureDir(config.assistant.knowledgeDir);
+    ensureDir(config.assistant.mediaDir);
+    ensureDir(config.assistant.logsDir);
 
-    // 3. تحميل الجلسة المحفوظة
-    const savedSession = await loadSession();
+    // 2) الاتصال بقاعدة البيانات
+    logger.info('📦 جاري الاتصال بقاعدة البيانات...');
+    await connection.connect();
+    logger.info('✅ تم الاتصال بقاعدة البيانات');
 
-    // 4. بدء العميل
-    await startClient(savedSession);
+    // 3) تهيئة Telegram
+    logger.info('📱 جاري تهيئة Telegram...');
+    await telegramService.initialize();
 
-    // 5. تشغيل لوحة التحكم
-    startDashboard();
+    // 4) تسجيل معالج الرسائل
+    telegramService.addMessageHandler(handleMessage);
+    logger.info('✅ تم تسجيل معالج الرسائل');
 
-    logger.info('✅ تم تشغيل المساعد بنجاح!');
+    // 5) بدء لوحة التحكم
+    const app = express();
+    app.use(express.json());
+    app.use(express.static(path.join(__dirname, 'public')));
+    app.use('/', apiRoutes);
+
+    const server = app.listen(config.dashboard.port, () => {
+      logger.info(`🌐 لوحة التحكم متاحة على المنفذ ${config.dashboard.port}`);
+    });
+
+    // 6) معلومات المساعد
+    const me = await telegramService.getMe();
+    if (me) {
+      logger.info(`🤖 المساعد يعمل باسم: ${me.firstName} (@${me.username || 'غير محدد'})`);
+    }
+
+    logger.info('✅ تم تشغيل المساعد بنجاح! اكتب له في تيليجرام.');
+
+    // 7) التعامل مع الإغلاق
+    const shutdown = async (signal) => {
+      logger.info(`📴 تم استلامإشارة ${signal}. جاري الإغلاق...`);
+      server.close();
+      await telegramService.disconnect();
+      await connection.disconnect();
+      process.exit(0);
+    };
+
+    process.on('SIGINT', () => shutdown('SIGINT'));
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('uncaughtException', (err) => {
+      logger.error('خطأ غير متوقع', { error: err.message, stack: err.stack });
+    });
+    process.on('unhandledRejection', (reason) => {
+      logger.error('Promise مرفوض', { reason: String(reason) });
+    });
 
   } catch (error) {
-    logger.error('❌ خطأ في بدء التشغيل', { error: error.message, stack: error.stack });
+    logger.error('❌ خطأ في بدء التشغيل', { error: error.message });
     process.exit(1);
   }
 }
 
-// ======================== معالجة الإنهاء ========================
-
-process.on('SIGINT', async () => {
-  logger.info('🔄 جاري إيقاف المساعد...');
-  if (client) {
-    const sessionData = client.session.save();
-    await saveSession(sessionData);
-    await client.disconnect();
-  }
-  process.exit(0);
-});
-
-process.on('SIGTERM', async () => {
-  logger.info('🔄 جاري إيقاف المساعد...');
-  if (client) {
-    const sessionData = client.session.save();
-    await saveSession(sessionData);
-    await client.disconnect();
-  }
-  process.exit(0);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  logger.error('❌ خطأ غير متوقع', { reason: reason?.message || reason });
-});
-
-// ======================== بدء التشغيل ========================
 main();

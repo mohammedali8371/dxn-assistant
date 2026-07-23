@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: dxn-assistant
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TELEGRAM_API_ID
+        sync: false
+      - key: TELEGRAM_API_HASH
+        sync: false
+      - key: TELEGRAM_PHONE
+        sync: false
+      - key: TELEGRAM_PASSWORD
+        sync: false
+      - key: AI_PROVIDER
+        value: openai
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: MONGODB_URI
+        sync: false
+      - key: DASHBOARD_PASSWORD
+        value: admin123

@@ -5,11 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>لوحة تحكم مساعد DXN</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
@@ -17,92 +13,57 @@
             min-height: 100vh;
             padding: 20px;
         }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        .header {
-            text-align: center;
-            padding: 30px 0;
-        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { text-align: center; padding: 30px 0; }
         .header h1 {
             font-size: 2.5rem;
-            margin-bottom: 10px;
             background: linear-gradient(90deg, #00f260, #0575e6);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-        .header p {
-            color: #a0aec0;
-            font-size: 1.1rem;
-        }
+        .header p { color: #a0aec0; margin-top: 10px; }
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
             margin: 30px 0;
         }
         .stat-card {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255,255,255,0.1);
             border-radius: 15px;
             padding: 25px;
             text-align: center;
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: transform 0.3s ease;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: transform 0.3s;
         }
-        .stat-card:hover {
-            transform: translateY(-5px);
-        }
-        .stat-card .icon {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-        }
-        .stat-card .value {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #00f260;
-        }
-        .stat-card .label {
-            color: #a0aec0;
-            margin-top: 5px;
-        }
+        .stat-card:hover { transform: translateY(-5px); }
+        .stat-card .icon { font-size: 2rem; margin-bottom: 10px; }
+        .stat-card .value { font-size: 2rem; font-weight: bold; color: #00f260; }
+        .stat-card .label { color: #a0aec0; margin-top: 5px; }
         .status-section {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255,255,255,0.1);
             border-radius: 15px;
             padding: 30px;
             margin: 30px 0;
-            backdrop-filter: blur(10px);
         }
-        .status-section h2 {
-            margin-bottom: 20px;
-            color: #00f260;
-        }
+        .status-section h2 { margin-bottom: 20px; color: #00f260; }
         .status-item {
             display: flex;
             justify-content: space-between;
             padding: 12px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .status-item:last-child {
-            border-bottom: none;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
         }
         .status-badge {
             padding: 4px 12px;
             border-radius: 20px;
             font-size: 0.85rem;
-        }
-        .status-online {
-            background: rgba(0, 242, 96, 0.2);
+            background: rgba(0,242,96,0.2);
             color: #00f260;
         }
-        .status-offline {
-            background: rgba(255, 71, 87, 0.2);
-            color: #ff4757;
-        }
-        .refresh-btn {
+        .btn {
             display: block;
-            margin: 30px auto;
+            margin: 20px auto;
             padding: 12px 30px;
             background: linear-gradient(90deg, #00f260, #0575e6);
             border: none;
@@ -112,21 +73,8 @@
             cursor: pointer;
             transition: opacity 0.3s;
         }
-        .refresh-btn:hover {
-            opacity: 0.9;
-        }
-        .last-update {
-            text-align: center;
-            color: #718096;
-            margin-top: 20px;
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        .loading {
-            animation: pulse 1.5s infinite;
-        }
+        .btn:hover { opacity: 0.9; }
+        .last-update { text-align: center; color: #718096; margin-top: 20px; }
     </style>
 </head>
 <body>
@@ -157,40 +105,45 @@
                 <div class="value" id="totalConversations">--</div>
                 <div class="label">إجمالي المحادثات</div>
             </div>
+            <div class="stat-card">
+                <div class="icon">📚</div>
+                <div class="value" id="totalKnowledge">--</div>
+                <div class="label">ملفات المعرفة</div>
+            </div>
         </div>
 
         <div class="status-section">
             <h2>📋 حالة النظام</h2>
             <div class="status-item">
                 <span>حالة الخادم</span>
-                <span class="status-badge status-online" id="serverStatus">--</span>
+                <span class="status-badge" id="serverStatus">--</span>
             </div>
             <div class="status-item">
                 <span>وقت التشغيل</span>
                 <span id="uptime">--</span>
             </div>
             <div class="status-item">
-                <span>استخدام الذاكرة</span>
+                <span>استهلاك الذاكرة</span>
                 <span id="memory">--</span>
             </div>
             <div class="status-item">
-                <span>اسم المساعد</span>
-                <span>أحمد</span>
+                <span>مزود الذكاء</span>
+                <span id="aiProvider">--</span>
             </div>
             <div class="status-item">
                 <span>قاعدة البيانات</span>
-                <span class="status-badge status-online">متصل</span>
+                <span class="status-badge">متصل</span>
             </div>
         </div>
 
-        <button class="refresh-btn" onclick="loadData()">🔄 تحديث البيانات</button>
+        <button class="btn" onclick="rebuildKnowledge()">🔄 إعادة بناء المعرفة</button>
+        <button class="btn" onclick="loadData()">🔄 تحديث البيانات</button>
         <div class="last-update">آخر تحديث: <span id="lastUpdate">--</span></div>
     </div>
 
     <script>
         async function loadData() {
             try {
-                // جلب الإحصائيات
                 const statsRes = await fetch('/api/stats');
                 const statsData = await statsRes.json();
                 if (statsData.success) {
@@ -198,42 +151,51 @@
                     document.getElementById('todayMessages').textContent = statsData.data.todayMessages || 0;
                     document.getElementById('todayErrors').textContent = statsData.data.todayErrors || 0;
                     document.getElementById('totalConversations').textContent = statsData.data.totalConversations || 0;
+                    document.getElementById('totalKnowledge').textContent = statsData.data.totalKnowledge || 0;
                 }
 
-                // جلب حالة الخادم
                 const healthRes = await fetch('/api/health');
                 const healthData = await healthRes.json();
                 if (healthData.success) {
                     document.getElementById('serverStatus').textContent = 'يعمل';
-                    document.getElementById('serverStatus').className = 'status-badge status-online';
                     document.getElementById('uptime').textContent = formatUptime(healthData.data.uptime);
                     document.getElementById('memory').textContent = formatMemory(healthData.data.memory);
+                }
+
+                const assistantRes = await fetch('/api/assistant');
+                const assistantData = await assistantRes.json();
+                if (assistantData.success) {
+                    document.getElementById('aiProvider').textContent = assistantData.data.provider;
                 }
 
                 document.getElementById('lastUpdate').textContent = new Date().toLocaleString('ar-SA');
             } catch (error) {
                 document.getElementById('serverStatus').textContent = 'متوقف';
-                document.getElementById('serverStatus').className = 'status-badge status-offline';
-                console.error('خطأ في جلب البيانات:', error);
+                console.error('خطأ:', error);
+            }
+        }
+
+        async function rebuildKnowledge() {
+            try {
+                await fetch('/api/rebuild', { method: 'POST' });
+                alert('تم إعادة بناء قاعدة المعرفة!');
+                loadData();
+            } catch (error) {
+                alert('حدث خطأ!');
             }
         }
 
         function formatUptime(seconds) {
             const hrs = Math.floor(seconds / 3600);
             const mins = Math.floor((seconds % 3600) / 60);
-            const secs = Math.floor(seconds % 60);
-            return `${hrs} ساعة ${mins} دقيقة ${secs} ثانية`;
+            return `${hrs} ساعة ${mins} دقيقة`;
         }
 
         function formatMemory(mem) {
-            const used = (mem.rss / 1024 / 1024).toFixed(1);
-            return `${used} MB`;
+            return `${(mem.rss / 1024 / 1024).toFixed(1)} MB`;
         }
 
-        // تحميل البيانات عند فتح الصفحة
         loadData();
-
-        // تحديث تلقائي كل 30 ثانية
         setInterval(loadData, 30000);
     </script>
 </body>
